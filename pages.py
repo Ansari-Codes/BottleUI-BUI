@@ -1,4 +1,5 @@
 from bottle import Bottle
+from app import app
 
 class Page:
     """
@@ -6,9 +7,11 @@ class Page:
     Each page should define a `to_html()` method that returns full HTML content.
     """
 
-    def __init__(self, widgets=None):
+    def __init__(self, widgets=None, route='/'):
         # widgets is a list of widget instances to render
         self.widgets = widgets or []
+        self.route = route
+        self.app = app
 
     def to_html(self):
         """
@@ -31,29 +34,37 @@ function reloadWidget(id) {{
         body: JSON.stringify({{id:id}})
     }}).then(r=>r.text()).then(html=>{{
         const el = document.getElementById(id);
-        if(el) el.outerHTML = html;
-    }}).catch(err=>console.error(err));
+        if(el && el.outerHTML === html) el.outerHTML = html;
+    }}).catch(err=>console.error(id, ':', err));
 }}
 
 setInterval(()=>{{
-    document.querySelectorAll('[reload-from]').forEach(el=>{{ reloadWidget(el.id); }});
+    document.querySelectorAll('[reload]').forEach(el=>{{ reloadWidget(el.id); }});
 }}, 100);
 
 // Button events
 function setupButtonEvents() {{
-    document.querySelectorAll('button[data-event="click"]').forEach(btn=>{{
-        btn.onclick = () => {{
+    // Select all elements that have a 'click' attribute
+    document.querySelectorAll('[click]').forEach(el => {{
+        el.onclick = () => {{
+            console.log(el.id, "triggering...");
             fetch('/_event', {{
                 method: 'POST',
                 headers: {{'Content-Type': 'application/json'}},
-                body: JSON.stringify({{id: btn.id}})
-            }}).then(r=>r.text()).then(html=>{{
-                btn.outerHTML = html;
-                setupButtonEvents();
-            }}).catch(err=>console.error(err));
+                body: JSON.stringify({{id: el.id}})
+            }})
+            .then(r => r.text())
+            .then(html => {{
+                el.outerHTML = html;       // replace with updated HTML
+                setupButtonEvents();       // rebind after replacement
+            }})
+            .catch(err => console.error(err));
+            console.log(el.id, "triggered!");
         }}
     }});
 }}
+
+// Initial bind
 setupButtonEvents();
 
 // Input / checkbox / range / select events
@@ -81,12 +92,12 @@ setupInputEvents();
 </html>
 '''
 
-    def register(self, app: Bottle, route='/', **kwargs):
+    def register(self, **kwargs):
         """
         Register this page to a route on a Bottle app.
         """
         page = self  # closure
 
-        @app.route(route, **kwargs) #type:ignore
+        @self.app.route(self.route, **kwargs) #type:ignore
         def render(**_kwargs):
             return page.to_html()

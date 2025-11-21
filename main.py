@@ -16,9 +16,8 @@ w_label = BLabel("I am a label")
 container = BContainer(children=[w_label, w_button])
 
 def on_button_clicked():
-    print("Clicked")
     with open('logs.log', 'a') as f:
-        f.write("Clicked")
+        f.write("Clicked\n")
     w_text.update("Button clicked!")
 w_button.set_handler(on_button_clicked)
 
@@ -43,13 +42,7 @@ def on_dropdown_change(selection):
 
 w_dropdown.set_onchange(on_dropdown_change)
 
-def on_button_click():
-    w_text.update("Button clicked!")
-    return w_button.to_html()
-
-w_button.set_handler(on_button_click)
-
 # --- Create page ---
 showcase_page = Page(widgets=[w_text, w_time, w_input, w_checkbox, w_slider, w_dropdown, container])
-showcase_page.register(app, route='/')
+showcase_page.register()
 app.run(host='127.0.0.1', port=8080)
